@@ -6,12 +6,15 @@ import re
 import hashlib
 import os
 import csv
+from urllib.parse import quote
 
 url = "https://en.wiktionary.org/w/api.php?action=query&prop=revisions&titles=QUERY&rvslots=*&rvprop=content&formatversion=2&format=json"
 
+headers = {'User-Agent': 'KoReaderAnkiExport/0.0 (https://github.com/RasmusRendal/koreaderankiexport; rasmus@rend.al)'}
+
 def raw_query(query):
     """Returns the german wiktionary entry as text"""
-    wiktionary = requests.get(url.replace("QUERY", query)).json()
+    wiktionary = requests.get(url.replace("QUERY", query), headers=headers).json()
     pages = wiktionary["query"]["pages"]
     if len(pages) < 1 or "revisions" not in pages[0]:
         return ""
@@ -26,24 +29,32 @@ def raw_query(query):
     return content
 
 
+def download_pronounciation(filename):
+    digest = hashlib.md5(filename.encode()).hexdigest()
+    url = "https://upload.wikimedia.org/wikipedia/commons/" + digest[0] + "/" + digest[0:2] + "/" + quote(filename)
+    print(url)
+    output = "/home/rendal/.local/share/Anki2/User 1/collection.media/" + filename
+    if not os.path.exists(output):
+        sound = requests.get(url, headers=headers)
+        if sound.status_code != 200:
+            print("Error occured!")
+            print(sound.text)
+        else:
+            open(output, 'wb').write(sound.content)
+
+
 def get_pronounciation(content):
     x = re.search("{{audio\|de\|(([^\W\d_]|[-.])+)\|Audio}}", content)
     if x == None:
         print("No pronounciation found")
         return ""
     filename = x.group(1)
-    digest = hashlib.md5(filename.encode()).hexdigest()
-    url = "https://upload.wikimedia.org/wikipedia/commons/" + digest[0] + "/" + digest[0:2] + "/" + filename
-    output = "/home/rendal/.local/share/Anki2/User 1/collection.media/" + filename
-    if not os.path.exists(output):
-        sound = requests.get(url)
-        open(output, 'wb').write(sound.content)
-        print("Downloaded sound file")
+    download_pronounciation(filename)
     return "[sound:" + filename + "]"
 
 
 def get_root(content):
-    x = re.search("{{[a-z ]+ of\|de\|([^\W\d_]+)(\||})", content)
+    x = re.search("{{[a-z -]+ of\|de\|([^\W\d_]+)(\||})", content)
     if x == None:
         return content
     else:
