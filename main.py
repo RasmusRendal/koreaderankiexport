@@ -12,7 +12,7 @@ def raw_query(query):
     """Returns the german wiktionary entry as text"""
     wiktionary = requests.get(url.replace("QUERY", query)).json()
     pages = wiktionary["query"]["pages"]
-    if len(pages) < 1:
+    if len(pages) < 1 or "revisions" not in pages[0]:
         return ""
     content = pages[0]["revisions"][0]["slots"]["main"]["content"]
     gstart = content.find("==German==")
@@ -42,7 +42,7 @@ def get_pronounciation(content):
 
 
 def get_root(content):
-    x = re.search("{{[a-z]+ form of\|de\|([^\W\d_]+)\|", content)
+    x = re.search("{{[a-z ]+ of\|de\|([^\W\d_]+)(\||})", content)
     if x == None:
         return content
     else:
@@ -78,12 +78,16 @@ if __name__ == "__main__":
             next_context = next_context[:next_context.find(". ")+1]
 
         definition, pronounciation = query_wiktionary(word)
+        os.system('clear')
         print(definition)
         print("")
 
         sentence = prev_context + word + next_context
         print(prev_context + color.BLUE + word + color.END + next_context)
         translation = input("Write translation: ")
+        if translation == "":
+            print("Skipped word")
+            continue
         row = (word, sentence, translation, pronounciation)
         output.append(row)
 
