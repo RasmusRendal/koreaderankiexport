@@ -84,10 +84,11 @@ if __name__ == "__main__":
     cur = con.cursor()
     output = []
     for word, prev_context, next_context in cur.execute("SELECT word, prev_context, next_context FROM vocabulary;"):
-        while ". " in prev_context:
-            prev_context = prev_context[prev_context.find(". ")+2:]
-        while ". " in next_context:
-            next_context = next_context[:next_context.find(". ")+1]
+        for c in [". ", "? ", "! "]:
+            while c in prev_context:
+                prev_context = prev_context[prev_context.find(c)+2:]
+            while c in next_context:
+                next_context = next_context[:next_context.find(c)+1]
 
         definition, pronounciation = query_wiktionary(word)
         os.system('clear')
